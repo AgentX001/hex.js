@@ -1,2 +1,8 @@
 # hex.js
-Minimalistic js lib for making hexagonal grids
+
+Минималистичная библиотека для работы с сеткой шестиугольников. Для поиска пути реализован алгоритм А*. 
+
+Для работы необходима библиотека https://github.com/AgentX001/math2d.js
+
+### Демо 
+https://agentx001.github.io/
