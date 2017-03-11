@@ -1,208 +1,210 @@
-function Hexagon(q, r, center, size) {
-    var width = size*2;
-    var height = Math.round(Math.sqrt(3)/2 * width);
+'use strict';
 
-    var blocked = false;
+const BOTTOM_RIGHT = 0,
+      BOTTOM = 1,
+      BOTTOM_LEFT = 2, 
+      UPPER_LEFT = 3,
+      UPPER = 4,
+      UPPER_RIGHT = 5;
 
-    var vertexes = [];
+class HexGrid {
+    constructor(columns, rows, hexSize) {
+        this.columns = columns;
+        this.rows = rows;
+        this.hexSize = hexSize;
+        this.hexWidth = hexSize * 2;
+        this.hexHeight = Math.round(Math.sqrt(3) / 2 * this.hexWidth);
+        this.offset = new Point(this.hexWidth / 2, this.hexHeight / 2);
+    }
 
-    for (var i = 0; i < 6; i++) {
-        var angle = (i*60).toRad();
-        vertexes[i] = new Point(
-            Math.round(center.x + size * Math.cos(angle)),
-            Math.round(center.y + size * Math.sin(angle))
+    check(hex) {
+        if (!hex) return false;
+        if (hex.length != 2) return false;
+        if ((typeof hex[0] != 'number' || typeof hex[1] != 'number') ||
+            (isNaN(hex[0]) || isNaN(hex[1])) ||
+            (hex[0] < 0 || hex[0] > this.columns - 1) ||
+            (hex[1] < 0 || hex[1] > this.rows - 1)) {
+                return false;
+            }
+        return true;
+    }
+
+    getEmptyMatrix() {
+        let matrix = [];
+        for (let q = 0; q < this.columns; q++) {
+            matrix[q] = [];
+            for (let r = 0; r < this.rows; r++) {
+                matrix[q][r] = 0;
+            }
+        }
+        
+        return matrix;
+    }
+
+    getHexCenter(hex) {
+        if (!this.check(hex)) return false;
+
+        let q = hex[0],
+            r = hex[1];
+
+        let center = new Point(
+            Math.round(q * 3/4 * this.hexWidth),
+            Math.round(r * this.hexHeight + (q&1) * (this.hexHeight/2))
         );
-    }
 
-    this.getQ = function() {
-        return q;
-    }
+        center.add(this.offset);
 
-    this.getR = function() {
-        return r;
-    }
-
-    this.getCenter = function() {
         return center;
     }
 
-    this.draw = function(context, style, text) {
-        context.strokeStyle = style;
-        context.beginPath();
-        context.moveTo(vertexes[0].x, vertexes[0].y);
-        for(var i = 1; i < 6; i++) {
-            context.lineTo(vertexes[i].x, vertexes[i].y);
-        }
-        context.closePath();
-        context.stroke();   
-        if (text) {
-            context.font = "12px sans-serif";
-            context.fillStyle = style;
-            context.fillText(text, center.x - size/2, center.y);
-        }
-    }
+    getHexPolygon(hex) {
+        if (!this.check(hex)) return false;
 
-    this.distanceTo = function(object) {
-        if (object instanceof Point) {
-            return center.distanceTo(object);
-        } else if (object instanceof Hexagon) {
-            return object.getCenter().distanceTo(center);
-        }
-    }
+        let q = hex[0],
+            r = hex[1];
 
-    this.inContact = function(hex) {
-        var dist = this.distanceTo(hex);    
-        return (dist < size*2);        
-    }
+        let center = this.getHexCenter(hex);
+        let vertices = [];
 
-    this.setBlocked = function(state) {
-        blocked = state;
-    }
-
-    this.isBlocked = function() {
-        return blocked;
-    }
-
-    this.equal = function(hex) {
-        return (q == hex.getQ() && r == hex.getR());
-    }
-}
-
-function Grid(colums, rows, hexSize) {
-    var hexWidth = hexSize*2;
-    var hexHeight = Math.round(Math.sqrt(3)/2 * hexWidth);
-    var offset = new Point(hexWidth/2, hexHeight/2);
-    
-    var hexGrid = [];
-    
-    for (var q = 0; q < colums; q++) {
-        hexGrid[q] = [];
-        for(var r = 0; r < rows; r++) {
-            var center = new Point(
-                offset.x + q * 3/4 * hexWidth,
-                Math.round(offset.y + r * hexHeight + (q&1) * (hexHeight/2))
+        for (let i = 0; i < 6; i++) {
+            let angle = (i*60).toRad();
+            vertices[i] = new Point(
+                Math.round(center.x + this.hexSize * Math.cos(angle)),
+                Math.round(center.y + this.hexSize * Math.sin(angle))
             );
-
-            hexGrid[q][r] = new Hexagon(q, r, center, hexSize);
-        }
-    }
-
-    this.getHex = function(q, r) {
-        if (q >= 0 && q < colums && r >= 0 && r < rows)
-            return hexGrid[q][r];
-    }
-
-    this.draw =  function(context, style) {
-        for (var q = 0; q < colums; q++) {
-            for(var r = 0; r < rows; r++) {
-                hexGrid[q][r].draw(context, style);
-            }
-        }
-    }
-
-    this.findNeighbors = function(hex) {
-        var q = hex.getQ();
-        var r = hex.getR();
-
-        var hexes = [];
-
-        if (q%2 == 1) {
-            hexes = [
-                {"q": q, "r": r-1},
-                {"q": q-1, "r": r+1},
-                {"q": q+1, "r": r},
-                {"q": q, "r": r+1},
-                {"q": q+1, "r": r+1},
-                {"q": q-1, "r": r}
-            ];    
-        } else {  
-            hexes = [
-                {"q": q, "r": r-1},
-                {"q": q-1, "r": r-1},
-                {"q": q-1, "r": r},
-                {"q": q, "r": r+1},
-                {"q": q+1, "r": r-1},
-                {"q": q+1, "r": r}
-            ];   
         }
 
-        var hexes2 = [];
-
-        for (var i = 0; i < hexes.length; i++) {
-             var hex = this.getHex(hexes[i].q, hexes[i].r);
-             if (hex) {
-                 hexes2[i] = hex;
-             }
-        }
-
-        return hexes2;
+        return new Polygon(vertices);
     }
 
-    this.findHex = function(point) {
-        var rectW = hexWidth * 0.75;
-        var rectH = hexHeight;
-        var q = Math.floor((point.x - 0.125 * rectW) / rectW);
-        var r = Math.floor((point.y - 0.5 * rectH * (q&1))/ rectH);
-        return this.getHex(q, r);
+    findHex(point) {
+        let rectW = this.hexWidth * 0.75;
+        let rectH = this.hexHeight;
+
+        let q = Math.floor((point.x - 0.125 * rectW) / rectW);
+        let r = Math.floor((point.y - 0.5 * rectH * (q&1)) / rectH);
+
+        let hex = [q, r];
+
+        if (!this.check(hex)) return false;
+        return hex;
     }
 
-    this.getBlockedHexes = function() {
-        var hexes = [];
-        for (var q = 0; q < colums; q++) {
-            for(var r = 0; r < rows; r++) {
-                var hex = hexGrid[q][r];
-                if (hex.isBlocked()) {
-                    hexes.push(hex);
-                }
-            }
+    getHexNeighbors(hex) {
+        if (!this.check(hex)) return false;
+
+        let neighbors = [];
+        let matrix = [];
+
+        if (hex[0]&1) {
+            matrix = [
+                [1, 1],
+                [0, 1],
+                [-1, 1],
+                [-1, 0],
+                [0, -1],
+                [1, 0]
+            ];
+        } else {
+            matrix = [
+                [1, 0],
+                [0, 1],
+                [-1, 0],
+                [-1, -1],
+                [0, -1],
+                [1, -1]
+            ];
         }
-        return hexes;
-    }
 
-    this.getUnblockedHexes = function() {
-        var hexes = [];
-        for (var q = 0; q < colums; q++) {
-            for(var r = 0; r < rows; r++) {
-                var hex = hexGrid[q][r];
-                if (!hex.isBlocked()) {
-                    hexes.push(hex);
-                }
-            }
-        }
-        return hexes;
-    } 
-
-    this.pathFind = function(start, finish) {
-
-        var open = [];
-        var closed = [];
-        var parents = [];
-
-        for (var q = 0; q < colums; q++) {
-            closed[q] = [];
-            parents[q] = [];
-            for(var r = 0; r < rows; r++) {
-                closed[q][r] = false;
-                parents[q][r] = false;
+        for (let i = 0; i < 6; i++) {
+            let neighbor = [hex[0] + matrix[i][0], hex[1] + matrix[i][1]];
+            if (this.check(neighbor)) {
+                neighbors[i] = neighbor;
             }
         }
 
-        var blocked = this.getBlockedHexes();
-        for (var i = 0; i < blocked.length; i++) {
-            var q = blocked[i].getQ();
-            var r = blocked[i].getR();
-            closed[q][r] = true;
+        return neighbors;
+    }
+
+    createLine(start, end) {
+        if (!this.check(start) || !this.check(end)) return false;
+
+        let line = [];
+
+        let endCenter = this.getHexCenter(end);
+
+        let current = start;
+
+        while(true) {
+            line.push(current);
+
+            if (current[0] == end[0] && current[1]== end[1]) return line;
+
+            let angle = (this.getHexCenter(current)).directionTo(endCenter);
+            angle = Math.floor(angle.toDeg() / 60);
+
+            let neighbors = this.getHexNeighbors(current);
+            let neighbor = neighbors[angle];
+            if (!neighbor) {
+                neighbor = neighbors[angle + 1];
+            }
+            if (!neighbor) {
+                neighbor = neighbors[angle - 1];
+            }
+            if (!neighbor) return false;
+
+            current = neighbor;
+        }
+    }
+
+    createCircle(center, radius) {
+        if (!this.check(center)) return false;
+
+        let circle = [[center]];
+        for (let i = 0; i < radius; i++) {
+            circle[i+1] = [];
+            for(let k = 0; k < circle[i].length; k++) {
+                let neighbors = this.getHexNeighbors(circle[i][k]);
+                if (neighbors.length < 1) continue;
+                circle[i+1] = circle[i+1].concat(neighbors);
+            }
         }
 
-        open.push(start);
+        let matrix = this.getEmptyMatrix();
 
-        var finished = false;
-        var next = false;
-        var k = 0; 
+        let result = [];
+        for (let i = 0; i < circle.length; i++) for (let k = 0; k < circle[i].length; k++) {
+            let hex = circle[i][k];
+            if (!this.check(hex)) continue;
+            if (matrix[hex[0]][hex[1]]) continue;
+            matrix[hex[0]][hex[1]] = 1;
+            result.push(hex);
+        }
+
+        return result;
+    }
+
+    findPath(start, finish, matrix) {
+        if (!this.check(start) || !this.check(finish)) return false;
+
+        if (start[0] == finish[0] && start[1] == finish[1]) return [start];
+
+        let finishCenter = this.getHexCenter(finish),
+            startCenter = this.getHexCenter(start);
+
+        let finished = false;
+
+        let open = [start],
+            parents = this.getEmptyMatrix();
+
+        let closed = [];
+        for(let q = 0; q < this.columns; q++) {
+            closed[q] = [].concat(matrix[q]);
+        }
+
+        let next;
 
         while(open.length) {
-            k++;
-
             var current;
             if (next) {
                 current = next;
@@ -211,33 +213,34 @@ function Grid(colums, rows, hexSize) {
                 current = open.pop();
             }
 
-            var price = current.distanceTo(finish);
+            let currentCenter = this.getHexCenter(current);
+            let price = currentCenter.distanceTo(finishCenter) /*+ currentCenter.distanceTo(startCenter)*/;
 
-            var q = current.getQ();
-            var r = current.getR();
+            let q = current[0],
+                r = current[1];
 
             closed[q][r] = true;
 
-            if (current.equal(finish)) {
+            if (current[0] == finish[0] && current[1] == finish[1]) {
                 finished = true;
                 break;
             }
 
-            var neighbors = this.findNeighbors(current);
-            var minPrice = price;
+            let neighbors = this.getHexNeighbors(current);
+            let minPrice = price;
 
-            for (var i = 0; i < neighbors.length; i++) {
-                var hex = neighbors[i];
+            for (let i = 0; i < neighbors.length; i++) {
+                let hex = neighbors[i];
                 
                 if (!hex) continue;
 
-                var q = hex.getQ();
-                var r = hex.getR();
+                let q = hex[0],
+                    r = hex[1];
 
-                if (hex.isBlocked()) continue;
                 if (closed[q][r]) continue;
 
-                var price = hex.distanceTo(finish);  
+                let hexCenter = this.getHexCenter(hex);
+                let price = hexCenter.distanceTo(finishCenter) /*+ hexCenter.distanceTo(startCenter)*/;
 
                 if (price < minPrice) {
                     minPrice = price;
@@ -251,20 +254,20 @@ function Grid(colums, rows, hexSize) {
                 }
             }
         }
-        console.log(k);
-        console.log(finished);
 
-        var path = [];
+        if (!finished) return false;
 
-        var j =  0;
+        let path = [finish];
+
+        let j = 0;
         while(true) {
             j++;
-            var q = current.getQ();
-            var r = current.getR();
+            let q = current[0],
+                r = current[1];
 
             current = parents[q][r];
 
-            if (current.equal(start)) {
+            if (current[0] == start[0] && current[1]== start[1]) {
                 break;
             }
             if (j>500) break;
@@ -272,8 +275,9 @@ function Grid(colums, rows, hexSize) {
             path.push(current);
         }
 
-        console.log(path);
-        return path;    
-    }
+        path.push(start);
 
+        path.reverse();
+        return path;
+    }
 }
