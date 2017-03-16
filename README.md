@@ -5,4 +5,4 @@
 Для работы необходима библиотека https://github.com/AgentX001/math2d.js
 
 ### Демо 
-https://agentx001.github.io/
+https://agentx001.github.io/demo
